@@ -176,3 +176,5 @@ cython_debug/
 ChatExport_exemple
 
 notebooks/worldclouds
+
+data

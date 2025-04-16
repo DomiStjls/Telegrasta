@@ -1,3 +1,6 @@
 pandas
 matplotlib 
 wordcloud
+nltk
+pymorphy3
+dash
