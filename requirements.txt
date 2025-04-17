@@ -4,3 +4,4 @@ wordcloud
 nltk
 pymorphy3
 dash
+emoji
