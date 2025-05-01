@@ -13,7 +13,9 @@ import base64
 from matplotlib import pyplot as plt
 import seaborn as sns
 import uuid
-
+from collections import Counter
+import re
+    
 model = pipeline(model="seara/rubert-tiny2-russian-sentiment")
 morph = MorphAnalyzer()
 
@@ -110,6 +112,20 @@ def most_common_emojis(text_series):
     emoji_freq = Counter(emojis).most_common(3)
     return " ".join([em for em, count in emoji_freq])
 
+def extract_top_words(df):
+
+    all_words = []
+    for text in df["text"].dropna():
+        words = re.findall(r'\b\w+\b', text.lower())
+        all_words.extend(words)
+    return pd.Series(Counter(all_words)).sort_values(ascending=False)
+
+def extract_top_emoji(df):
+
+    all_emojis = []
+    for text in df["text"].dropna():
+        all_emojis.extend([ch for ch in text if ch in emoji.EMOJI_DATA])
+    return pd.Series(Counter(all_emojis)).sort_values(ascending=False) 
 
 def plot_image(
     plot_type: str, start: str = None, end: str = None, sentiments: list = [], chat_df=None,  key: str = None
@@ -142,6 +158,29 @@ def plot_image(
         hour_df = sentiment_profile_by_hour(df_filtered)  # должен возвращать: hour, sentimental, percent
         sns.lineplot(data=hour_df, x="hour", y="percent", hue="sentimental", marker="o", ax=ax)
         ax.set_title("percent сообщений по времени суток")
+    elif plot_type == "top_words":
+        top_words_series = extract_top_words(df_filtered)
+        sns.barplot(
+            y=top_words_series.index[:10],
+            x=top_words_series.values[:10],
+            palette="viridis",
+            ax=ax
+        )
+        ax.set_title("Топ-слова")
+        ax.set_xlabel("Частота")
+        ax.set_ylabel("Слова")
+
+    elif plot_type == "top_emoji":
+        top_emoji_series = extract_top_emoji(df_filtered)
+        sns.barplot(
+            y=top_emoji_series.index[:10],
+            x=top_emoji_series.values[:10],
+            palette="rocket",
+            ax=ax
+        )
+        ax.set_title("Топ-эмодзи")
+        ax.set_xlabel("Частота")
+        ax.set_ylabel("Эмодзи")
 
     else:
         plt.text(0.5, 0.5, "Unknown plot", ha="center", va="center")
