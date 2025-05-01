@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="text-center mb-4">Статистика чата</h1>
+<h1 class="text-center mb-4">Ключ сессии: {{ key }}</h1>
+<!-- Фильтры -->
+<div class="card mb-4 p-4">
+    <form id="filter-form" class="row g-3">
+        <div class="col-md-3">
+            <label for="start" class="form-label">Дата начала</label>
+            <input type="date" class="form-control" id="start" name="start" value="{{ start_date }}">
+        </div>
+        <div class="col-md-3">
+            <label for="end" class="form-label">Дата окончания</label>
+            <input type="date" class="form-control" id="end" name="end" value="{{ end_date }}">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Тональности</label>
+            <div id="sentiments" class="d-flex flex-wrap gap-2">
+                {% for sentiment in sentiments %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="{{ sentiment }}" id="sentiment-{{ loop.index }}">
+                    <label class="form-check-label" for="sentiment-{{ loop.index }}">
+                        {{ sentiment }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Кнопка скачать PDF -->
+<div class="text-end mb-4">
+    <a href="/download_report" class="btn btn-primary">📄 Скачать PDF отчет</a>
+</div>
+
+<!-- Графики и анализ -->
+<div id="statistics">
+    <h2>Распределение сообщений по дням</h2>
+    <div id="histogram">
+        <img src="{{ histogram }}" class="img-fluid" />
+    </div>
+
+    <h2 class="mt-4">Тональности по дням недели</h2>
+    <div id="weekday">
+        <img src="{{ sentiment_weekday }}" class="img-fluid" />
+    </div>
+
+    <h2 class="mt-4">Тональности по времени суток</h2>
+    <div id="hour">
+        <img src="{{ sentiment_hour }}" class="img-fluid" />
+    </div>
+
+    <h2 class="mt-4">Частые слова</h2>
+    <div id="top-words">
+        
+        <img src="{{ top_words }}" class="img-fluid" />
+    </div>
+
+    <h2 class="mt-4">Топ эмодзи</h2>
+    <div id="emoji">
+        <img src="{{ top_emoji }}" class="img-fluid" />
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("filter-form");
+    const plots = ["histogram", "sentiment_weekday", "sentiment_hour", "top_words", "top_emoji"];
+
+    function getSelectedSentiments() {
+        const checkboxes = document.querySelectorAll("#sentiments input[type='checkbox']");
+        let selected = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) selected.push(cb.value);
+        });
+        return selected.join(",");
+    }
+
+    async function updatePlots() {
+        const start = document.getElementById("start").value;
+        const end = document.getElementById("end").value;
+        const sentiments = getSelectedSentiments();
+
+        for (const plotType of plots) {
+            const response = await fetch(`/plot/${plotType}?start=${start}&end=${end}&sentiments=${sentiments}`);
+            const html = await response.text();
+            document.getElementById(plotType).innerHTML = html;
+        }
+    }
+
+    form.addEventListener("change", updatePlots);
+});
+</script>
+
+{% endblock %}
