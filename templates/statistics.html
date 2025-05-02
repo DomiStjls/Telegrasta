@@ -1,39 +1,51 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="text-center mb-4">Статистика чата</h1>
-<h1 class="text-center mb-4">Ключ сессии: {{ key }}</h1>
-<!-- Фильтры -->
-<div class="card mb-4 p-4">
-    <form id="filter-form" class="row g-3">
-        <div class="col-md-3">
-            <label for="start" class="form-label">Дата начала</label>
-            <input type="date" class="form-control" id="start" name="start" value="{{ start_date }}">
-        </div>
-        <div class="col-md-3">
-            <label for="end" class="form-label">Дата окончания</label>
-            <input type="date" class="form-control" id="end" name="end" value="{{ end_date }}">
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Тональности</label>
-            <div id="sentiments" class="d-flex flex-wrap gap-2">
-                {% for sentiment in sentiments %}
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="{{ sentiment }}" id="sentiment-{{ loop.index }}">
-                    <label class="form-check-label" for="sentiment-{{ loop.index }}">
-                        {{ sentiment }}
-                    </label>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </form>
-</div>
 
-<!-- Кнопка скачать PDF -->
-<div class="text-end mb-4">
-    <a href="/download_report" class="btn btn-primary">📄 Скачать PDF отчет</a>
+<h1 class="text-center mb-4">Статистика чата</h1>
+<h1 class="text-center mb-4"><label for="key" class="form-label">Ключ сессии</label>
+    <input class="form-control" id="key" name="key" value="{{ key }}" readonly></h1>
+
+<!-- Фильтры и кнопка создания новой страницы -->
+<div class="card mb-4 p-4">
+    <form id="filter-form" class="row g-3" method="get" action="/statistics/{{ key }}">
+    <div class="col-md-3">
+        <label for="start" class="form-label">Дата начала</label>
+        <input type="date" class="form-control" id="start" name="start" value="{{ start_date }}">
+    </div>
+    <div class="col-md-3">
+        <label for="end" class="form-label">Дата окончания</label>
+        <input type="date" class="form-control" id="end" name="end" value="{{ end_date }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">Тональности</label>
+        <div id="sentiments" class="d-flex flex-wrap gap-2">
+            {% for sentiment in sentiments %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="{{ sentiment }}" name="sentiments" id="sentiment-{{ loop.index }}">
+                <label class="form-check-label" for="sentiment-{{ loop.index }}">
+                    {{ sentiment }}
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-12 text-end">
+        <button type="submit" class="btn btn-primary">Применить фильтры</button>
+    </div>
+</form>
 </div>
+<h2 class="mt-4">Общая статистика</h2>
+<ul>
+    <li>Всего сообщений: {{ general.total_messages }}</li>
+    <li>Авторы: {{ general.authors | join(", ") }}</li>
+    <li>Тональности: добрые — {{ general.sentiment_percent.positive }}%, 
+                     нейтральные — {{ general.sentiment_percent.neutral }}%, 
+                     агрессивные — {{ general.sentiment_percent.negative }}%</li>
+    <li>Чаще начинает беседу: {{ general.first_speaker }}</li>
+    <li>Пик активности: {{ general.peak_day }}</li>
+</ul>
+
 
 <!-- Графики и анализ -->
 <div id="statistics">
@@ -64,8 +76,40 @@
     </div>
 </div>
 
+
+<h2 class="mt-4">Статистика по пользователям</h2>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Автор</th><th>Всего сообщений</th><th>Средняя длина</th>
+            <th>Самое короткое</th><th>Самое длинное</th><th>Среднее в день</th>
+            <th>Добрые (%)</th><th>Нейтральные (%)</th><th>Агрессивные (%)</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for row in user_table %}
+        <tr>
+            <td>{{ row.from }}</td>
+            <td>{{ row.total_messages }}</td>
+            <td>{{ row.avg_length | round(1) }}</td>
+            <td>{{ row.shortest }}</td>
+            <td>{{ row.longest }}</td>
+            <td>{{ row.avg_per_day | round(1) }}</td>
+            <td>{{ row.positive | round(1, 'floor') }}</td>
+            <td>{{ row.neutral | round(1, 'floor') }}</td>
+            <td>{{ row.negative | round(1, 'floor') }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<!-- Кнопка скачать PDF -->
+<div class="text-end mb-4">
+    <a href="/download_report" class="btn btn-primary">📄 Скачать PDF отчет</a>
+</div>
+
 <!-- JavaScript -->
-<script>
+<!-- <script>
 document.addEventListener("DOMContentLoaded", function() {
     const form = document.getElementById("filter-form");
     const plots = ["histogram", "sentiment_weekday", "sentiment_hour", "top_words", "top_emoji"];
@@ -83,9 +127,10 @@ document.addEventListener("DOMContentLoaded", function() {
         const start = document.getElementById("start").value;
         const end = document.getElementById("end").value;
         const sentiments = getSelectedSentiments();
+        const key = document.getElementById("key").value;
 
         for (const plotType of plots) {
-            const response = await fetch(`/plot/${plotType}?start=${start}&end=${end}&sentiments=${sentiments}`);
+            const response = await fetch(`/statistics/${key}?start=${start}&end=${end}`);
             const html = await response.text();
             document.getElementById(plotType).innerHTML = html;
         }
@@ -93,6 +138,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     form.addEventListener("change", updatePlots);
 });
-</script>
+</script> -->
 
 {% endblock %}

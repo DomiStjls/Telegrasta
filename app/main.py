@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi import FastAPI, Request, UploadFile, File, Form, Query
+from typing import List, Optional
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import pandas as pd
-
+import seaborn as sns
 import matplotlib.pyplot as plt
 from io import BytesIO
 import os
@@ -14,6 +15,8 @@ from app.utils import (
     sentiment_profile_by_hour,
     sentiment_by_weekday_ratio,
     plot_image,
+    general_stats,
+    user_stats
 )
 from fastapi.responses import StreamingResponse
 import io
@@ -41,11 +44,11 @@ chat_df = pd.DataFrame()
 # Путь до текущего выбранного csv
 
 
-
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     # Проверяем, есть ли уже загруженный CSV
     return templates.TemplateResponse("upload.html", {"request": request})
+
 
 @app.post("/load", response_class=HTMLResponse)
 async def load_by_key(request: Request, key: str = Form(...)):
@@ -55,11 +58,11 @@ async def load_by_key(request: Request, key: str = Form(...)):
         for filename in os.listdir("./data/" + key):
             if filename.startswith("filtered_df"):
                 c += 1
-        
+
             chat_df = pd.read_csv(f"./data/{key}/filtered_df{c}.csv")
-            chat_df['date'] = pd.to_datetime(chat_df['date'])
-            chat_df['day'] = pd.to_datetime(chat_df['day'])
-            chat_df['day'] = chat_df['day'].dt.date
+            chat_df["date"] = pd.to_datetime(chat_df["date"])
+            chat_df["day"] = pd.to_datetime(chat_df["day"])
+            chat_df["day"] = chat_df["day"].dt.date
             chat_df["weekday"] = chat_df["date"].dt.day_name()
             chat_df["hour"] = chat_df["date"].dt.hour
     except Exception as e:
@@ -67,6 +70,7 @@ async def load_by_key(request: Request, key: str = Form(...)):
         return RedirectResponse(url="/", status_code=303)
 
     return RedirectResponse(url=f"/statistics/{key}", status_code=303)
+
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -84,20 +88,58 @@ async def upload_file(file: UploadFile = File(...)):
     df = pd.DataFrame(data)
     chat_df, name = preprocess_chat_data(df, key)
     chat_df.to_csv(name, index=False)
+    start = chat_df["date"].min().date()
+    end = chat_df["date"].max().date()
 
-    return RedirectResponse(url=f"/statistics/{key}", status_code=303)
+    return RedirectResponse(
+        url=f"/statistics/{key}?start={start}&end={end}", status_code=303
+    )
 
 
 @app.get("/statistics/{key}", response_class=HTMLResponse)
-async def statistics_page(request: Request, key: str):
+async def statistics_page(
+    request: Request,
+    key: str,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    sentiments_new: Optional[List[str]] = Query(default=[]),
+    authors_new: Optional[List[str]] = Query(default=[]),
+):
     global chat_df
+    if chat_df.empty:
+        try:
+            c = 0
+            for filename in os.listdir("./data/" + key):
+                if filename.startswith("filtered_df"):
+                    c += 1
+
+                chat_df = pd.read_csv(f"./data/{key}/filtered_df{c}.csv")
+                chat_df["date"] = pd.to_datetime(chat_df["date"])
+                chat_df["day"] = pd.to_datetime(chat_df["day"])
+                chat_df["day"] = chat_df["day"].dt.date
+                chat_df["weekday"] = chat_df["date"].dt.day_name()
+                chat_df["hour"] = chat_df["date"].dt.hour
+        except Exception as e:
+            print(e)
+            return RedirectResponse(url="/", status_code=303)
+    if start is None:
+        start = chat_df["date"].min().date()
+    if end is None:
+        end = chat_df["date"].max().date()
+
+    if sentiments_new is not None:
+        sentiments = sentiments_new
+    else:
+        sentiments = chat_df["sentimental"].unique().tolist()
+
+    if authors_new is not None:
+        authors = authors_new
+    else:
+        authors = chat_df["from"].unique().tolist()
     if chat_df.empty:
         return RedirectResponse("/", status_code=303)
     # static_path = f"/static/{key}"
-    sentiments = chat_df["sentimental"].unique().tolist()
-    authors = chat_df["from"].unique().tolist()
-    start = chat_df["date"].min().date()
-    end = chat_df["date"].max().date()
+
     histogram = plot_image("histogram", start, end, sentiments, chat_df, key)
     sentiment_weekday = plot_image(
         "sentiment_weekday", start, end, sentiments, chat_df, key
@@ -105,10 +147,14 @@ async def statistics_page(request: Request, key: str):
     sentiment_hour = plot_image("sentiment_hour", start, end, sentiments, chat_df, key)
     top_words = plot_image("top_words", start, end, sentiments, chat_df, key)
     top_emoji = plot_image("top_emoji", start, end, sentiments, chat_df, key)
+    general = general_stats(chat_df)
+    user_table = user_stats(chat_df)
+
+    print(sentiments)
     return templates.TemplateResponse(
         "statistics.html",
         {
-            'key': key,
+            "key": key,
             "request": request,
             "sentiments": sentiments,
             "authors": authors,
@@ -119,6 +165,10 @@ async def statistics_page(request: Request, key: str):
             "sentiment_hour": sentiment_hour,
             "top_words": top_words,
             "top_emoji": top_emoji,
+            "general": general,
+            "user_table": user_table.to_dict(orient="records"),
+
+
         },
     )
 

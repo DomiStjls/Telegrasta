@@ -142,28 +142,30 @@ def plot_image(
         # sentiments_list = sentiments.split(",")
         df_filtered = df_filtered[df_filtered["sentimental"].isin(sentiments)]
 
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(12, 4))
+    plt.rc('axes', unicode_minus=False)
     sns.set_theme()
 
     if plot_type == "histogram":
-        sns.histplot(data=df_filtered, x="day", bins=30, ax=ax)
+        sns.histplot(data=df_filtered, x="day", hue='day', palette="Blues_d", legend=False, bins=30, ax=ax)
         ax.set_title("Распределение сообщений по дням")
 
     elif plot_type == "sentiment_weekday":
         weekday_df = sentiment_by_weekday_ratio(df_filtered)  # должен возвращать: weekday, sentimental, percent
-        sns.barplot(data=weekday_df, x="weekday", y="percent", hue="sentimental", ax=ax)
+        sns.barplot(data=weekday_df, x="weekday", y="percent", palette="Blues_d", hue="sentimental", ax=ax)
         ax.set_title("percent сообщений каждой тональности по дням недели")
 
     elif plot_type == "sentiment_hour":
         hour_df = sentiment_profile_by_hour(df_filtered)  # должен возвращать: hour, sentimental, percent
-        sns.lineplot(data=hour_df, x="hour", y="percent", hue="sentimental", marker="o", ax=ax)
+        sns.lineplot(data=hour_df, x="hour", y="percent", hue="sentimental", palette="Blues_d",marker="o", ax=ax)
         ax.set_title("percent сообщений по времени суток")
     elif plot_type == "top_words":
         top_words_series = extract_top_words(df_filtered)
         sns.barplot(
             y=top_words_series.index[:10],
             x=top_words_series.values[:10],
-            palette="viridis",
+            hue=top_words_series.index[:10],
+            palette="Blues_d",
             ax=ax
         )
         ax.set_title("Топ-слова")
@@ -175,7 +177,8 @@ def plot_image(
         sns.barplot(
             y=top_emoji_series.index[:10],
             x=top_emoji_series.values[:10],
-            palette="rocket",
+            hue=top_emoji_series.index[:10],
+            palette="Blues_d",
             ax=ax
         )
         ax.set_title("Топ-эмодзи")
@@ -199,3 +202,47 @@ def plot_image(
     plt.close(fig)
 
     return f"/static/{key}/{filename}"
+
+def general_stats(df: pd.DataFrame) -> dict:
+    total_messages = len(df)
+    authors = df["from"].unique().tolist()
+
+    sentiment_counts = df["sentimental"].value_counts(normalize=True) * 100
+    sentiment_percent = {
+        "positive": round(sentiment_counts.get("positive", 0), 2),
+        "neutral": round(sentiment_counts.get("neutral", 0), 2),
+        "negative": round(sentiment_counts.get("negative", 0), 2),
+    }
+
+    first_messages = df.sort_values("date").groupby("day").first()
+    first_speaker = first_messages["from"].value_counts().idxmax()
+
+    peak_day = df["day"].value_counts().idxmax()
+
+    return {
+        "total_messages": total_messages,
+        "authors": authors,
+        "sentiment_percent": sentiment_percent,
+        "first_speaker": first_speaker,
+        "peak_day": peak_day,
+    }
+
+def user_stats(df: pd.DataFrame) -> pd.DataFrame:
+    grouped = df.groupby("from")
+
+    stats = grouped["text"].agg([
+        ("total_messages", "count"),
+        ("avg_length", lambda x: x.str.len().mean()),
+        ("shortest", lambda x: x.str.len().min()),
+        ("longest", lambda x: x.str.len().max()),
+    ])
+
+    days_active = grouped["day"].nunique()
+    stats["avg_per_day"] = stats["total_messages"] / days_active
+
+    sentiment_ratio = df.groupby(["from", "sentimental"]).size().unstack(fill_value=0)
+    sentiment_percent = sentiment_ratio.div(sentiment_ratio.sum(axis=1), axis=0) * 100
+
+    stats = stats.join(sentiment_percent, how="left").fillna(0)
+    return stats.reset_index()
+
