@@ -1,5 +1,3 @@
-from nltk.tokenize import word_tokenize
-
 from transformers import pipeline
 import pandas as pd
 from pymorphy3 import MorphAnalyzer
@@ -10,15 +8,14 @@ from collections import Counter
 from wordcloud import WordCloud
 from io import BytesIO
 import base64
-from matplotlib import pyplot as plt
 import seaborn as sns
 import uuid
-from collections import Counter
 import re
+from matplotlib import pyplot as plt 
     
 model = pipeline(model="seara/rubert-tiny2-russian-sentiment")
 morph = MorphAnalyzer()
-
+plt.rcParams['font.family'] = 'Segoe UI Emoji'
 
 def model_analysis(text):
     
@@ -127,6 +124,8 @@ def extract_top_emoji(df):
         all_emojis.extend([ch for ch in text if ch in emoji.EMOJI_DATA])
     return pd.Series(Counter(all_emojis)).sort_values(ascending=False) 
 
+
+
 def plot_image(
     plot_type: str, start: str = None, end: str = None, sentiments: list = [], chat_df=None,  key: str = None
 ):
@@ -143,6 +142,7 @@ def plot_image(
         df_filtered = df_filtered[df_filtered["sentimental"].isin(sentiments)]
 
     fig, ax = plt.subplots(figsize=(12, 4))
+    
     plt.rc('axes', unicode_minus=False)
     sns.set_theme()
 
@@ -174,11 +174,13 @@ def plot_image(
 
     elif plot_type == "top_emoji":
         top_emoji_series = extract_top_emoji(df_filtered)
+        # matplotlib.font_manager._rebuild()
+        plt.rcParams['font.family'] = 'Segoe UI Emoji'
         sns.barplot(
             y=top_emoji_series.index[:10],
             x=top_emoji_series.values[:10],
-            hue=top_emoji_series.index[:10],
             palette="Blues_d",
+            hue=top_emoji_series.index[:10],
             ax=ax
         )
         ax.set_title("Топ-эмодзи")
@@ -186,7 +188,7 @@ def plot_image(
         ax.set_ylabel("Эмодзи")
 
     else:
-        plt.text(0.5, 0.5, "Unknown plot", ha="center", va="center")
+        plt.text(0.5, 0.5, "Ups", ha="center", va="center")
 
     plt.tight_layout()
     buf = BytesIO()
@@ -203,9 +205,16 @@ def plot_image(
 
     return f"/static/{key}/{filename}"
 
-def general_stats(df: pd.DataFrame) -> dict:
+def general_stats(df_n: pd.DataFrame, start, end) -> dict:
+    df = df_n.copy()
+    if start and end:
+        df = df[
+            (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
+            & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
+        ]
     total_messages = len(df)
     authors = df["from"].unique().tolist()
+    
 
     sentiment_counts = df["sentimental"].value_counts(normalize=True) * 100
     sentiment_percent = {
@@ -227,7 +236,13 @@ def general_stats(df: pd.DataFrame) -> dict:
         "peak_day": peak_day,
     }
 
-def user_stats(df: pd.DataFrame) -> pd.DataFrame:
+def user_stats(df_n: pd.DataFrame, start, end) -> pd.DataFrame:
+    df = df_n.copy()
+    if start and end:
+        df = df[
+            (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
+            & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
+        ]
     grouped = df.groupby("from")
 
     stats = grouped["text"].agg([

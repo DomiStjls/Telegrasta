@@ -91,10 +91,10 @@
         <tr>
             <td>{{ row.from }}</td>
             <td>{{ row.total_messages }}</td>
-            <td>{{ row.avg_length | round(1) }}</td>
+            <td>{{ row.avg_length | round(0) }}</td>
             <td>{{ row.shortest }}</td>
             <td>{{ row.longest }}</td>
-            <td>{{ row.avg_per_day | round(1) }}</td>
+            <td>{{ row.avg_per_day | round(0) }}</td>
             <td>{{ row.positive | round(1, 'floor') }}</td>
             <td>{{ row.neutral | round(1, 'floor') }}</td>
             <td>{{ row.negative | round(1, 'floor') }}</td>

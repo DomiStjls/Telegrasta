@@ -127,7 +127,7 @@ async def statistics_page(
     if end is None:
         end = chat_df["date"].max().date()
 
-    if sentiments_new is not None:
+    if len(sentiments_new):
         sentiments = sentiments_new
     else:
         sentiments = chat_df["sentimental"].unique().tolist()
@@ -138,8 +138,14 @@ async def statistics_page(
         authors = chat_df["from"].unique().tolist()
     if chat_df.empty:
         return RedirectResponse("/", status_code=303)
-    # static_path = f"/static/{key}"
-
+    static_path = f"./static/{key}"
+    folder = static_path
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            os.unlink(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
     histogram = plot_image("histogram", start, end, sentiments, chat_df, key)
     sentiment_weekday = plot_image(
         "sentiment_weekday", start, end, sentiments, chat_df, key
@@ -147,10 +153,10 @@ async def statistics_page(
     sentiment_hour = plot_image("sentiment_hour", start, end, sentiments, chat_df, key)
     top_words = plot_image("top_words", start, end, sentiments, chat_df, key)
     top_emoji = plot_image("top_emoji", start, end, sentiments, chat_df, key)
-    general = general_stats(chat_df)
-    user_table = user_stats(chat_df)
+    general = general_stats(chat_df, start, end)
+    user_table = user_stats(chat_df, start, end)
 
-    print(sentiments)
+    # print(sentiments)
     return templates.TemplateResponse(
         "statistics.html",
         {
@@ -197,6 +203,7 @@ async def download_report():
     add_plot_to_pdf(draw_sentiment_hour, "Тональности по времени суток")
     add_plot_to_pdf(draw_top_words, "Частые слова")
     add_plot_to_pdf(draw_top_emoji, "Топ эмодзи")
+    
 
     output = io.BytesIO()
     pdf.output(output)
