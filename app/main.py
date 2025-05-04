@@ -132,7 +132,7 @@ async def statistics_page(
     else:
         sentiments = chat_df["sentimental"].unique().tolist()
 
-    if authors_new is not None:
+    if len(authors_new):
         authors = authors_new
     else:
         authors = chat_df["from"].unique().tolist()
@@ -162,7 +162,9 @@ async def statistics_page(
         {
             "key": key,
             "request": request,
+            "all_sentiments": chat_df["sentimental"].unique().tolist(),
             "sentiments": sentiments,
+            "all_authors": chat_df["from"].unique().tolist(),
             "authors": authors,
             "start_date": start,
             "end_date": end,

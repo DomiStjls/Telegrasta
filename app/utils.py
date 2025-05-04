@@ -11,14 +11,14 @@ import base64
 import seaborn as sns
 import uuid
 import re
-from matplotlib import pyplot as plt 
-    
+from matplotlib import pyplot as plt
+
 model = pipeline(model="seara/rubert-tiny2-russian-sentiment")
 morph = MorphAnalyzer()
-plt.rcParams['font.family'] = 'Segoe UI Emoji'
+# plt.rcParams['font.family'] = 'Segoe UI Emoji'
+
 
 def model_analysis(text):
-    
     return model(text)[0]["label"]
 
 
@@ -72,7 +72,6 @@ def preprocess_chat_data(df, key):
 
 
 def sentiment_profile_by_hour(df):
-    
     grouped = df.groupby(["hour", "sentimental"]).size().reset_index(name="count")
     total = grouped.groupby("hour")["count"].transform("sum")
     grouped["percent"] = grouped["count"] / total * 100
@@ -80,7 +79,6 @@ def sentiment_profile_by_hour(df):
 
 
 def sentiment_by_weekday_ratio(df):
-    
     grouped = df.groupby(["weekday", "sentimental"]).size().reset_index(name="count")
     total = grouped.groupby("weekday")["count"].transform("sum")
     grouped["percent"] = grouped["count"] / total * 100
@@ -109,27 +107,30 @@ def most_common_emojis(text_series):
     emoji_freq = Counter(emojis).most_common(3)
     return " ".join([em for em, count in emoji_freq])
 
-def extract_top_words(df):
 
+def extract_top_words(df):
     all_words = []
     for text in df["text"].dropna():
-        words = re.findall(r'\b\w+\b', text.lower())
+        words = re.findall(r"\b\w+\b", text.lower())
         all_words.extend(words)
     return pd.Series(Counter(all_words)).sort_values(ascending=False)
 
-def extract_top_emoji(df):
 
+def extract_top_emoji(df):
     all_emojis = []
     for text in df["text"].dropna():
         all_emojis.extend([ch for ch in text if ch in emoji.EMOJI_DATA])
-    return pd.Series(Counter(all_emojis)).sort_values(ascending=False) 
-
+    return pd.Series(Counter(all_emojis)).sort_values(ascending=False)
 
 
 def plot_image(
-    plot_type: str, start: str = None, end: str = None, sentiments: list = [], chat_df=None,  key: str = None
+    plot_type: str,
+    start: str = None,
+    end: str = None,
+    sentiments: list = [],
+    chat_df=None,
+    key: str = None,
 ):
-    
     df_filtered = chat_df.copy()
 
     if start and end:
@@ -142,22 +143,49 @@ def plot_image(
         df_filtered = df_filtered[df_filtered["sentimental"].isin(sentiments)]
 
     fig, ax = plt.subplots(figsize=(12, 4))
-    
-    plt.rc('axes', unicode_minus=False)
+
+    plt.rc("axes", unicode_minus=False)
     sns.set_theme()
 
     if plot_type == "histogram":
-        sns.histplot(data=df_filtered, x="day", hue='day', palette="Blues_d", legend=False, bins=30, ax=ax)
+        sns.histplot(
+            data=df_filtered,
+            x="day",
+            hue="day",
+            palette="Blues_d",
+            legend=False,
+            bins=30,
+            ax=ax,
+        )
         ax.set_title("Распределение сообщений по дням")
 
     elif plot_type == "sentiment_weekday":
-        weekday_df = sentiment_by_weekday_ratio(df_filtered)  # должен возвращать: weekday, sentimental, percent
-        sns.barplot(data=weekday_df, x="weekday", y="percent", palette="Blues_d", hue="sentimental", ax=ax)
+        weekday_df = sentiment_by_weekday_ratio(
+            df_filtered
+        )  # должен возвращать: weekday, sentimental, percent
+        sns.barplot(
+            data=weekday_df,
+            x="weekday",
+            y="percent",
+            palette="Blues_d",
+            hue="sentimental",
+            ax=ax,
+        )
         ax.set_title("percent сообщений каждой тональности по дням недели")
 
     elif plot_type == "sentiment_hour":
-        hour_df = sentiment_profile_by_hour(df_filtered)  # должен возвращать: hour, sentimental, percent
-        sns.lineplot(data=hour_df, x="hour", y="percent", hue="sentimental", palette="Blues_d",marker="o", ax=ax)
+        hour_df = sentiment_profile_by_hour(
+            df_filtered
+        )  # должен возвращать: hour, sentimental, percent
+        sns.lineplot(
+            data=hour_df,
+            x="hour",
+            y="percent",
+            hue="sentimental",
+            palette="Blues_d",
+            marker="o",
+            ax=ax,
+        )
         ax.set_title("percent сообщений по времени суток")
     elif plot_type == "top_words":
         top_words_series = extract_top_words(df_filtered)
@@ -166,7 +194,7 @@ def plot_image(
             x=top_words_series.values[:10],
             hue=top_words_series.index[:10],
             palette="Blues_d",
-            ax=ax
+            ax=ax,
         )
         ax.set_title("Топ-слова")
         ax.set_xlabel("Частота")
@@ -174,18 +202,18 @@ def plot_image(
 
     elif plot_type == "top_emoji":
         top_emoji_series = extract_top_emoji(df_filtered)
-        # matplotlib.font_manager._rebuild()
-        plt.rcParams['font.family'] = 'Segoe UI Emoji'
-        sns.barplot(
-            y=top_emoji_series.index[:10],
-            x=top_emoji_series.values[:10],
-            palette="Blues_d",
-            hue=top_emoji_series.index[:10],
-            ax=ax
+        em_df = pd.DataFrame(
+            {"emoji": top_emoji_series.index, "count": top_emoji_series.values}
         )
-        ax.set_title("Топ-эмодзи")
-        ax.set_xlabel("Частота")
-        ax.set_ylabel("Эмодзи")
+        # table = "\n".join(
+        #     [f"<tr>\n<td>{r['emoji']}</td>\n<td>{r['count']}</td>\n</tr>" for i, r in em_df.iterrows()]
+        # )
+        # table = {"emoji": top_emoji_series.index[:10].tolist(), "count": top_emoji_series.values[:10].tolist()
+        # }
+        a_emoji = " ".join(
+            [r['emoji'] for i, r in em_df.iterrows()][:5]
+        )
+        return a_emoji
 
     else:
         plt.text(0.5, 0.5, "Ups", ha="center", va="center")
@@ -205,6 +233,7 @@ def plot_image(
 
     return f"/static/{key}/{filename}"
 
+
 def general_stats(df_n: pd.DataFrame, start, end) -> dict:
     df = df_n.copy()
     if start and end:
@@ -212,9 +241,9 @@ def general_stats(df_n: pd.DataFrame, start, end) -> dict:
             (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
             & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
         ]
+
     total_messages = len(df)
     authors = df["from"].unique().tolist()
-    
 
     sentiment_counts = df["sentimental"].value_counts(normalize=True) * 100
     sentiment_percent = {
@@ -226,38 +255,69 @@ def general_stats(df_n: pd.DataFrame, start, end) -> dict:
     first_messages = df.sort_values("date").groupby("day").first()
     first_speaker = first_messages["from"].value_counts().idxmax()
 
-    peak_day = df["day"].value_counts().idxmax()
+    # Вычисляем час, если не был заранее рассчитан
+    if "hour" not in df.columns:
+        df["hour"] = pd.to_datetime(df["date"]).dt.hour
+
+    peak_hour = df["hour"].value_counts().idxmax()
 
     return {
         "total_messages": total_messages,
         "authors": authors,
         "sentiment_percent": sentiment_percent,
         "first_speaker": first_speaker,
-        "peak_day": peak_day,
+        "peak_hour": peak_hour,
     }
+
 
 def user_stats(df_n: pd.DataFrame, start, end) -> pd.DataFrame:
     df = df_n.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    df["day"] = pd.to_datetime(df["day"])
+
+    # Фильтрация по дате
     if start and end:
         df = df[
-            (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
-            & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
+            (df["date"] >= pd.to_datetime(start)) & (df["date"] <= pd.to_datetime(end))
         ]
+
+    df["hour"] = df["date"].dt.hour
     grouped = df.groupby("from")
 
-    stats = grouped["text"].agg([
-        ("total_messages", "count"),
-        ("avg_length", lambda x: x.str.len().mean()),
-        ("shortest", lambda x: x.str.len().min()),
-        ("longest", lambda x: x.str.len().max()),
-    ])
+    # Считаем тексты короткого и длинного сообщений
+    shortest_texts = grouped.apply(
+        lambda g: g.loc[g["text"].str.len().idxmin()]["text"] if not g.empty else ""
+    )
+    longest_texts = grouped.apply(
+        lambda g: g.loc[g["text"].str.len().idxmax()]["text"] if not g.empty else ""
+    )
 
+    # Базовая статистика
+    stats = grouped["text"].agg(
+        [
+            ("total_messages", "count"),
+            ("avg_length", lambda x: x.str.len().mean()),
+        ]
+    )
+
+    # Среднее число сообщений в день
     days_active = grouped["day"].nunique()
     stats["avg_per_day"] = stats["total_messages"] / days_active
 
+    # Проценты по тональности
     sentiment_ratio = df.groupby(["from", "sentimental"]).size().unstack(fill_value=0)
     sentiment_percent = sentiment_ratio.div(sentiment_ratio.sum(axis=1), axis=0) * 100
 
     stats = stats.join(sentiment_percent, how="left").fillna(0)
-    return stats.reset_index()
 
+    # Пиковый час активности
+    peak_hours = grouped["hour"].agg(
+        lambda x: x.value_counts().idxmax() if not x.empty else None
+    )
+    stats["peak_hour"] = peak_hours
+
+    # Добавим тексты сообщений
+    stats["shortest_msg"] = shortest_texts
+    stats["longest_msg"] = longest_texts
+    
+    return stats.reset_index()

@@ -4,104 +4,188 @@
 
 <h1 class="text-center mb-4">Статистика чата</h1>
 <h1 class="text-center mb-4"><label for="key" class="form-label">Ключ сессии</label>
-    <input class="form-control" id="key" name="key" value="{{ key }}" readonly></h1>
+    <input class="form-control" id="key" name="key" value="{{ key }}" readonly>
+</h1>
 
 <!-- Фильтры и кнопка создания новой страницы -->
 <div class="card mb-4 p-4">
     <form id="filter-form" class="row g-3" method="get" action="/statistics/{{ key }}">
-    <div class="col-md-3">
-        <label for="start" class="form-label">Дата начала</label>
-        <input type="date" class="form-control" id="start" name="start" value="{{ start_date }}">
-    </div>
-    <div class="col-md-3">
-        <label for="end" class="form-label">Дата окончания</label>
-        <input type="date" class="form-control" id="end" name="end" value="{{ end_date }}">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Тональности</label>
-        <div id="sentiments" class="d-flex flex-wrap gap-2">
-            {% for sentiment in sentiments %}
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="{{ sentiment }}" name="sentiments" id="sentiment-{{ loop.index }}">
-                <label class="form-check-label" for="sentiment-{{ loop.index }}">
-                    {{ sentiment }}
-                </label>
+        <div class="col-md-3">
+            <label for="start" class="form-label">Дата начала</label>
+            <input type="date" class="form-control" id="start" name="start" value="{{ start_date }}">
+        </div>
+        <div class="col-md-3">
+            <label for="end" class="form-label">Дата окончания</label>
+            <input type="date" class="form-control" id="end" name="end" value="{{ end_date }}">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Тональности</label>
+            <div id="sentiments" class="d-flex flex-wrap gap-2">
+                {% for sentiment in all_sentiments %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="{{ sentiment }}"
+                        id="sentiment-{{ loop.index }}" name="sentiments_new" {% if sentiment in sentiments
+                        %}checked{% endif %}>
+                    <label class="form-check-label" for="sentiment-{{ loop.index }}">
+                        {{ sentiment }}
+                    </label>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+        </div>
+        <div class="col-md-6">
+            <label for="authors" class="form-label">Авторы</label>
+            <div id="authors" class="d-flex flex-wrap gap-2">
+                {% for author in all_authors %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="{{ author }}"
+                        id="sentiment-{{ loop.index }}" name="authors_new" {% if author in authors%}checked{% endif %}>
+                    <label class="form-check-label" for="author-{{ loop.index }}">
+                        {{ author }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary">Применить фильтры</button>
+        </div>
+    </form>
+</div>
+<h2 style="text-align: center;" class="mt-4">Общая статистика</h2>
+<div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Всего сообщений</h5>
+                <p class="card-text">{{ general.total_messages }}</p>
+            </div>
         </div>
     </div>
-    <div class="col-12 text-end">
-        <button type="submit" class="btn btn-primary">Применить фильтры</button>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Авторы</h5>
+                <p class="card-text">{{ general.authors | join(', ') }}</p>
+            </div>
+        </div>
     </div>
-</form>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Процент добрых сообщений</h5>
+                <p class="card-text">{{ general.sentiment_percent.positive }}%</p>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Процент нейтральных сообщений</h5>
+                <p class="card-text">{{ general.sentiment_percent.neutral }}%</p>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Процент агрессивных сообщений</h5>
+                <p class="card-text">{{ general.sentiment_percent.negative }}%</p>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Кто чаще пишет первым</h5>
+                <p class="card-text">{{ general.first_speaker }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Пик активности</h5>
+                <p class="card-text">{{ general.peak_hour }}:00 - {{ (general.peak_hour + 1) % 24 }}:00</p>
+            </div>
+        </div>
+    </div>
 </div>
-<h2 class="mt-4">Общая статистика</h2>
-<ul>
-    <li>Всего сообщений: {{ general.total_messages }}</li>
-    <li>Авторы: {{ general.authors | join(", ") }}</li>
-    <li>Тональности: добрые — {{ general.sentiment_percent.positive }}%, 
-                     нейтральные — {{ general.sentiment_percent.neutral }}%, 
-                     агрессивные — {{ general.sentiment_percent.negative }}%</li>
-    <li>Чаще начинает беседу: {{ general.first_speaker }}</li>
-    <li>Пик активности: {{ general.peak_day }}</li>
-</ul>
-
 
 <!-- Графики и анализ -->
 <div id="statistics">
-    <h2>Распределение сообщений по дням</h2>
+    <h2 style="text-align: center;" class="mt-4">Распределение сообщений по дням</h2>
     <div id="histogram">
         <img src="{{ histogram }}" class="img-fluid" />
     </div>
 
-    <h2 class="mt-4">Тональности по дням недели</h2>
+    <h2 style="text-align: center;" class="mt-4">Тональности по дням недели</h2>
     <div id="weekday">
         <img src="{{ sentiment_weekday }}" class="img-fluid" />
     </div>
 
-    <h2 class="mt-4">Тональности по времени суток</h2>
+    <h2 style="text-align: center;" class="mt-4">Тональности по времени суток</h2>
     <div id="hour">
         <img src="{{ sentiment_hour }}" class="img-fluid" />
     </div>
 
-    <h2 class="mt-4">Частые слова</h2>
+    <h2 style="text-align: center;" class="mt-4">Частые слова</h2>
     <div id="top-words">
-        
+
         <img src="{{ top_words }}" class="img-fluid" />
     </div>
 
-    <h2 class="mt-4">Топ эмодзи</h2>
+    <h2 style="text-align: center;" class="mt-4">Топ эмодзи</h2>
     <div id="emoji">
-        <img src="{{ top_emoji }}" class="img-fluid" />
+        <h3 style="font-size: 2em; text-align: center;">{{ top_emoji }}</h3>
     </div>
 </div>
 
 
-<h2 class="mt-4">Статистика по пользователям</h2>
-<table class="table table-bordered">
+<h2 style="text-align: center;" class="mt-4">Статистика по пользователям</h2>
+<table class="table table-bordered align-middle">
     <thead>
         <tr>
-            <th>Автор</th><th>Всего сообщений</th><th>Средняя длина</th>
-            <th>Самое короткое</th><th>Самое длинное</th><th>Среднее в день</th>
-            <th>Добрые (%)</th><th>Нейтральные (%)</th><th>Агрессивные (%)</th>
+            <th>Автор</th>
+            <th>Всего сообщений</th>
+            <th>Средняя длина</th>
+            <th>Самое короткое</th>
+            <th>Самое длинное</th>
+            <th>Среднее в день</th>
+            <th>Добрые (%)</th>
+            <th>Нейтральные (%)</th>
+            <th>Агрессивные (%)</th>
+            <th>Пиковый час</th>
         </tr>
     </thead>
     <tbody>
-    {% for row in user_table %}
+        {% for row in user_table %}
         <tr>
             <td>{{ row.from }}</td>
             <td>{{ row.total_messages }}</td>
             <td>{{ row.avg_length | round(0) }}</td>
-            <td>{{ row.shortest }}</td>
-            <td>{{ row.longest }}</td>
+            <td>{{ row.shortest_msg }}</td>
+            <td>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#longest{{ loop.index }}">
+                        Показать
+                    </button>
+                    <div id="longest{{ loop.index }}" class="collapse mt-2">
+                        {{ row.longest_msg }}
+                    </div>
+                </div>
+            </td>
             <td>{{ row.avg_per_day | round(0) }}</td>
             <td>{{ row.positive | round(1, 'floor') }}</td>
             <td>{{ row.neutral | round(1, 'floor') }}</td>
             <td>{{ row.negative | round(1, 'floor') }}</td>
+            <td>{{ row.peak_hour }}</td>
         </tr>
-    {% endfor %}
+        {% endfor %}
     </tbody>
 </table>
+
 
 <!-- Кнопка скачать PDF -->
 <div class="text-end mb-4">
@@ -139,5 +223,5 @@ document.addEventListener("DOMContentLoaded", function() {
     form.addEventListener("change", updatePlots);
 });
 </script> -->
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}
