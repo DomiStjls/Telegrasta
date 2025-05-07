@@ -5,9 +5,10 @@ import os
 import emoji
 import numpy as np
 from collections import Counter
-from wordcloud import WordCloud
+from wordcloud import WordCloud, STOPWORDS
 from io import BytesIO
-import base64
+import nltk
+from nltk.corpus import stopwords
 import seaborn as sns
 import uuid
 import re
@@ -16,6 +17,25 @@ from matplotlib import pyplot as plt
 model = pipeline(model="seara/rubert-tiny2-russian-sentiment")
 morph = MorphAnalyzer()
 # plt.rcParams['font.family'] = 'Segoe UI Emoji'
+nltk.download("stopwords")
+sw = stopwords.words("russian")
+russian_stopwords = [
+    "ой",
+    "типо",
+    "че",
+    "всё",
+    "хз",
+    "это",
+    "типа",
+    "прям",
+    "ваще",
+    "щас",
+    "кста",
+    "кст",
+    "ага",
+    "блин",
+]
+stopwords_all = set(STOPWORDS) | set(russian_stopwords) | set(sw)
 
 
 def model_analysis(text):
@@ -85,14 +105,27 @@ def sentiment_by_weekday_ratio(df):
     return grouped
 
 
-def generate_wordcloud(text):
-    wc = WordCloud(
-        width=800, height=400, background_color="white", max_words=100
-    ).generate(text)
-    buffer = BytesIO()
-    wc.to_image().save(buffer, format="PNG")
-    encoded = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/png;base64,{encoded}"
+def generate_wordclouds(df: pd.DataFrame, key: str, start: str, end: str):
+    output_dir = f"static/{key}/wordclouds"
+    os.makedirs(output_dir, exist_ok=True)
+    df_copy = df[
+            (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
+            & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
+        ]
+    for author in df_copy["from"].unique():
+        # if os.path.join(output_dir, f"{author}.png") in os.listdir(output_dir):
+        #     continue
+        author_df = df_copy[df_copy["from"] == author]
+        text = " ".join(
+            [el.lower() for el in author_df["text"].dropna().astype(str) if len(el) > 1]
+        )
+
+        if not text.strip():
+            continue
+
+        wc = WordCloud(width=400, height=600, stopwords=stopwords_all, background_color="white").generate(text)
+        wc_path = os.path.join(output_dir, f"{author}.png")
+        wc.to_file(wc_path)
 
 
 def most_common_emojis(text_series):
@@ -171,7 +204,7 @@ def plot_image(
             hue="sentimental",
             ax=ax,
         )
-        ax.set_title("percent сообщений каждой тональности по дням недели")
+        ax.set_title("Процент сообщений каждой тональности по дням недели")
 
     elif plot_type == "sentiment_hour":
         hour_df = sentiment_profile_by_hour(
@@ -186,19 +219,30 @@ def plot_image(
             marker="o",
             ax=ax,
         )
-        ax.set_title("percent сообщений по времени суток")
-    elif plot_type == "top_words":
-        top_words_series = extract_top_words(df_filtered)
+        ax.set_title("Процент сообщений по времени суток")
+    elif plot_type.startswith("top_words_"):
+        sent = plot_type.split("_")[-1]  # "positive", "neutral", "negative"
+        filtered = df_filtered[
+            (df_filtered["sentimental"] == sent) & (df_filtered["text"].str.len() > 1)
+        ]
+
+        text_data = filtered["text"].tolist()
+        words = [w.lower() for w in text_data if len(w) > 1]
+        word_counts = pd.Series(words).value_counts().head(10)
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        palette = {"positive": "Greens_d", "neutral": "Blue_d", "negative": "Reds_d"}[sent]
+
         sns.barplot(
-            y=top_words_series.index[:10],
-            x=top_words_series.values[:10],
-            hue=top_words_series.index[:10],
-            palette="Blues_d",
-            ax=ax,
+            y=word_counts.index,
+            x=word_counts.values,
+            palette=palette,
+            ax=ax
         )
-        ax.set_title("Топ-слова")
+        ax.set_title(f"Топ {sent} слова")
         ax.set_xlabel("Частота")
         ax.set_ylabel("Слова")
+
 
     elif plot_type == "top_emoji":
         top_emoji_series = extract_top_emoji(df_filtered)
@@ -210,9 +254,7 @@ def plot_image(
         # )
         # table = {"emoji": top_emoji_series.index[:10].tolist(), "count": top_emoji_series.values[:10].tolist()
         # }
-        a_emoji = " ".join(
-            [r['emoji'] for i, r in em_df.iterrows()][:5]
-        )
+        a_emoji = " ".join([r["emoji"] for i, r in em_df.iterrows()][:5])
         return a_emoji
 
     else:
@@ -296,13 +338,13 @@ def user_stats(df_n: pd.DataFrame, start, end) -> pd.DataFrame:
     stats = grouped["text"].agg(
         [
             ("total_messages", "count"),
-            ("avg_length", lambda x: x.str.len().mean()),
+            ("avg_length", lambda x: int(x.str.len().mean())),
         ]
     )
 
     # Среднее число сообщений в день
     days_active = grouped["day"].nunique()
-    stats["avg_per_day"] = stats["total_messages"] / days_active
+    stats["avg_per_day"] = (stats["total_messages"] / days_active).astype(int)
 
     # Проценты по тональности
     sentiment_ratio = df.groupby(["from", "sentimental"]).size().unstack(fill_value=0)
@@ -319,5 +361,5 @@ def user_stats(df_n: pd.DataFrame, start, end) -> pd.DataFrame:
     # Добавим тексты сообщений
     stats["shortest_msg"] = shortest_texts
     stats["longest_msg"] = longest_texts
-    
+    print(stats)
     return stats.reset_index()

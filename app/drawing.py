@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-sns.set(style="whitegrid", palette="pastel", font_scale=1.2)
+sns.set_theme(style="whitegrid", palette="pastel", font_scale=1.2)
 
 # — Функция для гистограммы сообщений по дням —
 def draw_histogram(df: pd.DataFrame) -> plt.Figure:

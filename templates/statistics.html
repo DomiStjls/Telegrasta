@@ -129,11 +129,13 @@
         <img src="{{ sentiment_hour }}" class="img-fluid" />
     </div>
 
-    <h2 style="text-align: center;" class="mt-4">Частые слова</h2>
-    <div id="top-words">
-
-        <img src="{{ top_words }}" class="img-fluid" />
+    <h2 class="mt-4">Топ-слова по тональности</h2>
+    <div class="row text-center">
+        <div class="col-md-4"><img src="{{ top_words_positive }}" class="img-fluid" /></div>
+        <div class="col-md-4"><img src="{{ top_words_neutral }}" class="img-fluid" /></div>
+        <div class="col-md-4"><img src="{{ top_words_negative }}" class="img-fluid" /></div>
     </div>
+
 
     <h2 style="text-align: center;" class="mt-4">Топ эмодзи</h2>
     <div id="emoji">
@@ -151,7 +153,7 @@
             <th>Средняя длина</th>
             <th>Самое короткое</th>
             <th>Самое длинное</th>
-            <th>Среднее в день</th>
+            <th>Среднее количество сообщений в день</th>
             <th>Добрые (%)</th>
             <th>Нейтральные (%)</th>
             <th>Агрессивные (%)</th>
@@ -163,7 +165,7 @@
         <tr>
             <td>{{ row.from }}</td>
             <td>{{ row.total_messages }}</td>
-            <td>{{ row.avg_length | round(0) }}</td>
+            <td>{{ row.avg_length  }}</td>
             <td>{{ row.shortest_msg }}</td>
             <td>
                 <div>
@@ -176,7 +178,7 @@
                     </div>
                 </div>
             </td>
-            <td>{{ row.avg_per_day | round(0) }}</td>
+            <td>{{ row.avg_per_day }}</td>
             <td>{{ row.positive | round(1, 'floor') }}</td>
             <td>{{ row.neutral | round(1, 'floor') }}</td>
             <td>{{ row.negative | round(1, 'floor') }}</td>
@@ -185,43 +187,21 @@
         {% endfor %}
     </tbody>
 </table>
-
+<h2>Облака слов по участникам</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 30px;">
+{% for author in authors %}
+    <div style="margin-bottom: 40px;">
+        <h3>{{ author }}</h3>
+        <img src="/static/{{ key }}/wordclouds/{{ author }}.png" style="max-width:100%; height:auto;">
+    </div>
+{% endfor %}
+</div>  
 
 <!-- Кнопка скачать PDF -->
 <div class="text-end mb-4">
     <a href="/download_report" class="btn btn-primary">📄 Скачать PDF отчет</a>
 </div>
 
-<!-- JavaScript -->
-<!-- <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const form = document.getElementById("filter-form");
-    const plots = ["histogram", "sentiment_weekday", "sentiment_hour", "top_words", "top_emoji"];
 
-    function getSelectedSentiments() {
-        const checkboxes = document.querySelectorAll("#sentiments input[type='checkbox']");
-        let selected = [];
-        checkboxes.forEach(cb => {
-            if (cb.checked) selected.push(cb.value);
-        });
-        return selected.join(",");
-    }
-
-    async function updatePlots() {
-        const start = document.getElementById("start").value;
-        const end = document.getElementById("end").value;
-        const sentiments = getSelectedSentiments();
-        const key = document.getElementById("key").value;
-
-        for (const plotType of plots) {
-            const response = await fetch(`/statistics/${key}?start=${start}&end=${end}`);
-            const html = await response.text();
-            document.getElementById(plotType).innerHTML = html;
-        }
-    }
-
-    form.addEventListener("change", updatePlots);
-});
-</script> -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

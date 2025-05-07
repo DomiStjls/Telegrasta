@@ -3,20 +3,18 @@ from typing import List, Optional
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
+
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
-from io import BytesIO
 import os
 import json
 from app.utils import (
     preprocess_chat_data,
-    sentiment_profile_by_hour,
-    sentiment_by_weekday_ratio,
     plot_image,
     general_stats,
-    user_stats
+    user_stats,
+    generate_wordclouds,
 )
 from fastapi.responses import StreamingResponse
 import io
@@ -27,7 +25,6 @@ from app.drawing import (
     draw_sentiment_weekday,
     draw_sentiment_hour,
     draw_top_words,
-    draw_top_emoji,
 )
 import uuid
 
@@ -43,6 +40,10 @@ key = None
 chat_df = pd.DataFrame()
 # Путь до текущего выбранного csv
 
+favicon_path = 'favicon.ico'
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return FileResponse(favicon_path)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -155,7 +156,10 @@ async def statistics_page(
     top_emoji = plot_image("top_emoji", start, end, sentiments, chat_df, key)
     general = general_stats(chat_df, start, end)
     user_table = user_stats(chat_df, start, end)
-
+    top_words_positive = plot_image("top_words_positive", start, end, sentiments, chat_df, key)
+    top_words_negative = plot_image("top_words_negative", start, end, sentiments, chat_df, key)
+    top_words_neutral = plot_image("top_words_neutral", start, end, sentiments, chat_df, key)
+    generate_wordclouds(chat_df, key, start, end)
     # print(sentiments)
     return templates.TemplateResponse(
         "statistics.html",
@@ -175,6 +179,9 @@ async def statistics_page(
             "top_emoji": top_emoji,
             "general": general,
             "user_table": user_table.to_dict(orient="records"),
+            "top_words_positive": top_words_positive,
+            "top_words_negative": top_words_negative,
+            "top_words_neutral": top_words_neutral,
 
 
         },
@@ -189,7 +196,7 @@ async def download_report():
 
     def add_plot_to_pdf(plot_func, title):
         buf = io.BytesIO()
-        fig = plot_func()
+        fig = plot_func(chat_df)
         fig.savefig(buf, format="png", bbox_inches="tight")
         plt.close(fig)
         buf.seek(0)
@@ -204,7 +211,7 @@ async def download_report():
     add_plot_to_pdf(draw_sentiment_weekday, "Тональности по дням недели")
     add_plot_to_pdf(draw_sentiment_hour, "Тональности по времени суток")
     add_plot_to_pdf(draw_top_words, "Частые слова")
-    add_plot_to_pdf(draw_top_emoji, "Топ эмодзи")
+    # add_plot_to_pdf(draw_top_emoji, "Топ эмодзи")
     
 
     output = io.BytesIO()
