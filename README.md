@@ -1,6 +1,6 @@
 # TM-NA
 
-
+### *создано исключительно в развлекательных целях*
 ---
 
 # Анализ и визуализация чатов Telegram
@@ -27,7 +27,7 @@
 1. Клонируйте репозиторий:
 
 ```bash
-git clone https://github.com/DomiStjls/Telegrasta/Telegrasta.git
+git clone https://github.com/DomiStjls/Telegrasta.git
 cd Telegrasta
 ```
 
