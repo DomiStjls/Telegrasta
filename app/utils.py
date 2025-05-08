@@ -3,7 +3,6 @@ import pandas as pd
 from pymorphy3 import MorphAnalyzer
 import os
 import emoji
-import numpy as np
 from collections import Counter
 from wordcloud import WordCloud, STOPWORDS
 from io import BytesIO
@@ -160,10 +159,11 @@ def plot_image(
     plot_type: str,
     start: str = None,
     end: str = None,
-    sentiments: list = [],
+    # sentiments: list = [],
     chat_df=None,
     key: str = None,
 ):
+
     df_filtered = chat_df.copy()
 
     if start and end:
@@ -171,9 +171,7 @@ def plot_image(
             (pd.to_datetime(df_filtered["date"]) >= pd.to_datetime(start))
             & (pd.to_datetime(df_filtered["date"]) <= pd.to_datetime(end))
         ]
-    if len(sentiments):
-        # sentiments_list = sentiments.split(",")
-        df_filtered = df_filtered[df_filtered["sentimental"].isin(sentiments)]
+    
 
     fig, ax = plt.subplots(figsize=(12, 4))
 
@@ -181,10 +179,13 @@ def plot_image(
     sns.set_theme()
 
     if plot_type == "histogram":
+        # if len(sentiments):
+        #     # sentiments_list = sentiments.split(",")
+        #     df_filtered = df_filtered[df_filtered["sentimental"].isin(sentiments)]
         sns.histplot(
             data=df_filtered,
             x="day",
-            hue="day",
+            hue="weekday",
             palette="Blues_d",
             legend=False,
             bins=30,
@@ -222,21 +223,24 @@ def plot_image(
         ax.set_title("Процент сообщений по времени суток")
     elif plot_type.startswith("top_words_"):
         sent = plot_type.split("_")[-1]  # "positive", "neutral", "negative"
+        # if sent not in sentiments:
+        #     return None
         filtered = df_filtered[
             (df_filtered["sentimental"] == sent) & (df_filtered["text"].str.len() > 1)
         ]
 
         text_data = filtered["text"].tolist()
-        words = [w.lower() for w in text_data if len(w) > 1]
+        words = [w.lower() for w in ' '.join(text_data).split() if len(w) > 1 and w not in stopwords_all]
         word_counts = pd.Series(words).value_counts().head(10)
 
         fig, ax = plt.subplots(figsize=(6, 4))
-        palette = {"positive": "Greens_d", "neutral": "Blue_d", "negative": "Reds_d"}[sent]
+        palette = {"positive": "Greens_d", "neutral": "Blues_d", "negative": "Reds_d"}[sent]
 
         sns.barplot(
             y=word_counts.index,
             x=word_counts.values,
             palette=palette,
+            hue=word_counts.index,
             ax=ax
         )
         ax.set_title(f"Топ {sent} слова")
@@ -283,6 +287,7 @@ def general_stats(df_n: pd.DataFrame, start, end) -> dict:
             (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
             & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
         ]
+    
 
     total_messages = len(df)
     authors = df["from"].unique().tolist()
@@ -361,5 +366,5 @@ def user_stats(df_n: pd.DataFrame, start, end) -> pd.DataFrame:
     # Добавим тексты сообщений
     stats["shortest_msg"] = shortest_texts
     stats["longest_msg"] = longest_texts
-    print(stats)
+    
     return stats.reset_index()

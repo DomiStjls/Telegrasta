@@ -51,21 +51,18 @@ async def read_root(request: Request):
     return templates.TemplateResponse("upload.html", {"request": request})
 
 
-@app.post("/load", response_class=HTMLResponse)
-async def load_by_key(request: Request, key: str = Form(...)):
+@app.post("/load")
+async def load_by_key(key: str = Form(...)):
     global chat_df
     try:
-        c = 0
-        for filename in os.listdir("./data/" + key):
-            if filename.startswith("filtered_df"):
-                c += 1
-
-            chat_df = pd.read_csv(f"./data/{key}/filtered_df{c}.csv")
-            chat_df["date"] = pd.to_datetime(chat_df["date"])
-            chat_df["day"] = pd.to_datetime(chat_df["day"])
-            chat_df["day"] = chat_df["day"].dt.date
-            chat_df["weekday"] = chat_df["date"].dt.day_name()
-            chat_df["hour"] = chat_df["date"].dt.hour
+        
+        filename = os.listdir("./data/" + key)[0]
+        chat_df = pd.read_csv(f"./data/{key}/{filename}")
+        chat_df["date"] = pd.to_datetime(chat_df["date"])
+        chat_df["day"] = pd.to_datetime(chat_df["day"])
+        chat_df["day"] = chat_df["day"].dt.date
+        chat_df["weekday"] = chat_df["date"].dt.day_name()
+        chat_df["hour"] = chat_df["date"].dt.hour
     except Exception as e:
         print(e)
         return RedirectResponse(url="/", status_code=303)
@@ -147,18 +144,18 @@ async def statistics_page(
             os.unlink(file_path)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
-    histogram = plot_image("histogram", start, end, sentiments, chat_df, key)
+    histogram = plot_image("histogram", start, end, chat_df, key)
     sentiment_weekday = plot_image(
-        "sentiment_weekday", start, end, sentiments, chat_df, key
+        "sentiment_weekday", start, end, chat_df, key
     )
-    sentiment_hour = plot_image("sentiment_hour", start, end, sentiments, chat_df, key)
-    top_words = plot_image("top_words", start, end, sentiments, chat_df, key)
-    top_emoji = plot_image("top_emoji", start, end, sentiments, chat_df, key)
+    sentiment_hour = plot_image("sentiment_hour", start, end, chat_df, key)
+    top_words = plot_image("top_words", start, end, chat_df, key)
+    top_emoji = plot_image("top_emoji", start, end, chat_df, key)
     general = general_stats(chat_df, start, end)
     user_table = user_stats(chat_df, start, end)
-    top_words_positive = plot_image("top_words_positive", start, end, sentiments, chat_df, key)
-    top_words_negative = plot_image("top_words_negative", start, end, sentiments, chat_df, key)
-    top_words_neutral = plot_image("top_words_neutral", start, end, sentiments, chat_df, key)
+    top_words_positive = plot_image("top_words_positive", start, end, chat_df, key)
+    top_words_negative = plot_image("top_words_negative", start, end, chat_df, key)
+    top_words_neutral = plot_image("top_words_neutral", start, end, chat_df, key)
     generate_wordclouds(chat_df, key, start, end)
     # print(sentiments)
     return templates.TemplateResponse(

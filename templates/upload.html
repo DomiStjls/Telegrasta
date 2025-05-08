@@ -9,9 +9,9 @@
 </form>
 
 <h3>Или введите ваш ключ доступа</h3>
-<form method="post" action="/load">
-    <label>Введите ключ:</label>
-    <input type="text" name="key" required>
-    <button type="submit">Перейти</button>
-  </form>
+<form action="/load" method="post">
+  <input type="text" name="key" placeholder="Введите ключ" required />
+  <button type="submit" class="btn btn-primary">Загрузить</button>
+</form>
+
 {% endblock %}

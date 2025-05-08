@@ -3,10 +3,10 @@
 {% block content %}
 
 <h1 class="text-center mb-4">Статистика чата</h1>
-<h1 class="text-center mb-4"><label for="key" class="form-label">Ключ сессии</label>
-    <input class="form-control" id="key" name="key" value="{{ key }}" readonly>
-</h1>
 
+<!-- <h1 class="text-center mb-4"><label for="key" class="form-label"></label> -->
+<!-- </h1> -->
+<input class="form-control" id="key" name="key" value="Ключ сессии: {{ key }}" readonly>
 <!-- Фильтры и кнопка создания новой страницы -->
 <div class="card mb-4 p-4">
     <form id="filter-form" class="row g-3" method="get" action="/statistics/{{ key }}">
@@ -18,7 +18,7 @@
             <label for="end" class="form-label">Дата окончания</label>
             <input type="date" class="form-control" id="end" name="end" value="{{ end_date }}">
         </div>
-        <div class="col-md-6">
+        <!-- <div class="col-md-6">
             <label class="form-label">Тональности</label>
             <div id="sentiments" class="d-flex flex-wrap gap-2">
                 {% for sentiment in all_sentiments %}
@@ -32,7 +32,7 @@
                 </div>
                 {% endfor %}
             </div>
-        </div>
+        </div> -->
         <div class="col-md-6">
             <label for="authors" class="form-label">Авторы</label>
             <div id="authors" class="d-flex flex-wrap gap-2">
@@ -129,11 +129,17 @@
         <img src="{{ sentiment_hour }}" class="img-fluid" />
     </div>
 
-    <h2 class="mt-4">Топ-слова по тональности</h2>
+    <h2 style="text-align: center;"  class="mt-4">Топ-слова по тональности</h2>
     <div class="row text-center">
+        {% if 'positive' in sentiments %}
         <div class="col-md-4"><img src="{{ top_words_positive }}" class="img-fluid" /></div>
+        {% endif %}
+        {% if 'neutral' in sentiments %}
         <div class="col-md-4"><img src="{{ top_words_neutral }}" class="img-fluid" /></div>
+        {% endif %}
+        {% if 'negative' in sentiments %}
         <div class="col-md-4"><img src="{{ top_words_negative }}" class="img-fluid" /></div>
+        {% endif %}
     </div>
 
 
@@ -141,7 +147,7 @@
     <div id="emoji">
         <h3 style="font-size: 2em; text-align: center;">{{ top_emoji }}</h3>
     </div>
-</div>
+
 
 
 <h2 style="text-align: center;" class="mt-4">Статистика по пользователям</h2>
@@ -150,7 +156,7 @@
         <tr>
             <th>Автор</th>
             <th>Всего сообщений</th>
-            <th>Средняя длина</th>
+            <th>Средняя длина сообщения</th>
             <th>Самое короткое</th>
             <th>Самое длинное</th>
             <th>Среднее количество сообщений в день</th>
@@ -187,6 +193,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 <h2>Облака слов по участникам</h2>
 <div style="display: flex; flex-wrap: wrap; gap: 30px;">
 {% for author in authors %}
@@ -198,9 +205,9 @@
 </div>  
 
 <!-- Кнопка скачать PDF -->
-<div class="text-end mb-4">
+<!-- <div class="text-end mb-4">
     <a href="/download_report" class="btn btn-primary">📄 Скачать PDF отчет</a>
-</div>
+</div> -->
 
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
