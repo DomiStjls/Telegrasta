@@ -65,20 +65,18 @@ uvicorn main:app --reload
 
 ---
 
-## Пример
+## Инструкция к скачиванию истории чата из Telegram в виде json
 
-* Главная страница: загрузка JSON и ввод ключа
-* Страница статистики: графики, числовой анализ, таблицы, wordcloud
-* Отчеты формируются на основе выбранных фильтров
+1. Нажмите на 3 точки в чате
 
----
+![image](https://github.com/user-attachments/assets/73b042fe-1e53-4009-a4e9-3ab558c2b958)
 
-## Требования
+2. Нажмите "Экспорт истории чата"
 
-* Python 3.8+
-* FastAPI
-* pandas
-* seaborn, matplotlib
-* Jinja2
-* wordcloud
+![image](https://github.com/user-attachments/assets/a7376375-0236-4265-9088-44e6a3b0ada1)
+
+3. Выставите нужные параметры (статистика учитывает только текстовые сообщения, поэтому все остальное можно не экспортировать), обязательно выберите формат json
+
+![image](https://github.com/user-attachments/assets/e217ccf2-7d0e-4490-a184-4e2913f43d66)
+
 
