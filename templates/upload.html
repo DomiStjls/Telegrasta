@@ -3,11 +3,16 @@
 {% block content %}
 
 <h1 class="text-center">Загрузка чата</h1>
-<form action="/upload" method="post" enctype="multipart/form-data" class="text-center my-5">
+<form id="upload-form" action="/upload" method="post" enctype="multipart/form-data" class="text-center my-5">
     <input type="file" name="file" class="form-control mb-3" required>
     <button type="submit" class="btn btn-primary">Загрузить</button>
 </form>
-
+<div id="loading" style="display: none; margin-top: 1em;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Загрузка...</span>
+    </div>
+    <span>Обработка данных, подождите...</span>
+</div>
 <h3>Или введите ваш ключ доступа</h3>
 <form action="/load" method="post">
   <input type="text" name="key" placeholder="Введите ключ" required />
@@ -37,7 +42,11 @@
         {% endfor %}
     </tbody>
 </table>
-
+<script>
+document.getElementById("upload-form").addEventListener("submit", function () {
+    document.getElementById("loading").style.display = "block";
+});
+</script>
 {% endif %}
 
 {% endblock %}
