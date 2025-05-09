@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-
+<div class="sticky-top bg-white py-2 px-3 border-bottom shadow-sm">
+    <a href="/" class="btn btn-secondary">← Вернуться на главную</a>
+</div>
 <h1 class="text-center mb-4">Статистика чата</h1>
+
 
 <!-- <h1 class="text-center mb-4"><label for="key" class="form-label"></label> -->
 <!-- </h1> -->
@@ -78,11 +81,27 @@
             </div>
         </div>
     </div>
+        <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Самый добрый день</h5>
+                <p class="card-text">{{ general.most_positive_day }}</p>
+            </div>
+        </div>
+    </div>
     <div class="col">
         <div class="card h-100">
             <div class="card-body">
                 <h5 class="card-title">Процент нейтральных сообщений</h5>
                 <p class="card-text">{{ general.sentiment_percent.neutral }}%</p>
+            </div>
+        </div>
+    </div>
+  <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Самый нейтральный день</h5>
+                <p class="card-text">{{ general.most_neutral_day }}</p>
             </div>
         </div>
     </div>
@@ -94,6 +113,14 @@
             </div>
         </div>
     </div>
+     <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Самый агрессивный день</h5>
+                <p class="card-text">{{ general.most_negative_day }}</p>
+            </div>
+        </div>
+    </div>
     <div class="col">
         <div class="card h-100">
             <div class="card-body">
@@ -102,14 +129,23 @@
             </div>
         </div>
     </div>
+
     <div class="col">
         <div class="card h-100">
             <div class="card-body">
-                <h5 class="card-title">Пик активности</h5>
+                <h5 class="card-title">Час-пик активности</h5>
                 <p class="card-text">{{ general.peak_hour }}:00 - {{ (general.peak_hour + 1) % 24 }}:00</p>
             </div>
         </div>
     </div>
+        <!-- <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">День недели-пик активности</h5>
+                <p class="card-text">{{ general.peak_weekday }}</p>
+            </div>
+        </div>
+    </div> -->
 </div>
 
 <!-- Графики и анализ -->
