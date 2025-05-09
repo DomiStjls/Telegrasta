@@ -27,6 +27,8 @@ from app.drawing import (
     draw_top_words,
 )
 import uuid
+import datetime  
+import shutil
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -47,6 +49,17 @@ async def favicon():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
+    for filename in os.listdir("./data/"):
+        c_timestamp = os.path.getctime("./data/" +filename)  # Получаем время создания в виде числа, указывающего количество секунд с начала эпохи Unix   
+        c_datestamp = datetime.datetime.fromtimestamp(c_timestamp) # Преобразовываем значение в объект времени 
+        # print(f'Session {filename} Created on: {c_datestamp}') 
+        if datetime.datetime.now() - c_datestamp > datetime.timedelta(days=2):
+            shutil.rmtree("./data/" +filename)
+            try:
+                shutil.rmtree("./static/" +filename)
+                
+            except Exception as e:
+                print(f"Exception: {e} in /")
     # Проверяем, есть ли уже загруженный CSV
     return templates.TemplateResponse("upload.html", {"request": request})
 
@@ -64,7 +77,7 @@ async def load_by_key(key: str = Form(...)):
         chat_df["weekday"] = chat_df["date"].dt.day_name()
         chat_df["hour"] = chat_df["date"].dt.hour
     except Exception as e:
-        print(e)
+        print(f"Exception: {e} in /load")
         return RedirectResponse(url="/", status_code=303)
 
     return RedirectResponse(url=f"/statistics/{key}", status_code=303)
@@ -118,7 +131,7 @@ async def statistics_page(
                 chat_df["weekday"] = chat_df["date"].dt.day_name()
                 chat_df["hour"] = chat_df["date"].dt.hour
         except Exception as e:
-            print(e)
+            print(f"Exception: {e} in /statistics/key")
             return RedirectResponse(url="/", status_code=303)
     if start is None:
         start = chat_df["date"].min().date()
@@ -148,6 +161,7 @@ async def statistics_page(
     sentiment_weekday = plot_image(
         "sentiment_weekday", start, end, chat_df, key
     )
+    count_by_weekday = plot_image("count_weekday", start, end, chat_df, key)
     sentiment_hour = plot_image("sentiment_hour", start, end, chat_df, key)
     top_words = plot_image("top_words", start, end, chat_df, key)
     top_emoji = plot_image("top_emoji", start, end, chat_df, key)
@@ -171,6 +185,7 @@ async def statistics_page(
             "end_date": end,
             "histogram": histogram,
             "sentiment_weekday": sentiment_weekday,
+            "count_by_weekday": count_by_weekday,
             "sentiment_hour": sentiment_hour,
             "top_words": top_words,
             "top_emoji": top_emoji,
