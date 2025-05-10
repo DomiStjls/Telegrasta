@@ -80,11 +80,13 @@ async def read_root(request: Request):
             shutil.rmtree("./data/" + filename)
 
             try:
-                del chat_keys[filename]
                 shutil.rmtree("./static/" + filename)
+                if filename in chat_keys.keys():
+                    del chat_keys[filename]
+                
 
             except Exception as e:
-                print(f"Exception: {e} in /")
+                print(f"Exception: er {e} in /")
     request.session["chat_keys"] = chat_keys
 
     return templates.TemplateResponse(
@@ -109,6 +111,10 @@ async def load_by_key(request: Request, key: str = Form(...)):
         chat_keys = request.session.get("chat_keys", {})
         chat_keys[key] = authors
         request.session["chat_keys"] = chat_keys
+        start = chat_df["date"].min().date()
+        end = chat_df["date"].max().date()
+        request.session['start'] =str(start)
+        request.session['end'] =str(end)
     except Exception as e:
         print(f"Exception: {e} in /load")
         return RedirectResponse(url="/", status_code=303)
@@ -139,7 +145,8 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     chat_keys = request.session.get("chat_keys", {})
     chat_keys[key] = authors
     request.session["chat_keys"] = chat_keys
-
+    request.session['start'] =str(start)
+    request.session['end'] =str(end)
     return RedirectResponse(
         url=f"/statistics/{key}?start={start}&end={end}", status_code=303
     )
@@ -171,6 +178,7 @@ async def statistics_page(
         except Exception as e:
             print(f"Exception: {e} in /statistics/key")
             return RedirectResponse(url="/", status_code=303)
+    
     if start is None:
         start = chat_df["date"].min().date()
     if end is None:
@@ -199,27 +207,31 @@ async def statistics_page(
         (pd.to_datetime(chat_df["date"]) >= pd.to_datetime(start))
         & (pd.to_datetime(chat_df["date"]) <= pd.to_datetime(end))
     ]
-    histogram = plot_image("histogram", start, end, chat_df_start_end, key)
+    histogram = plot_image("histogram", start, end, chat_df_start_end, key, authors)
     sentiment_weekday = plot_image(
-        "sentiment_weekday", start, end, chat_df_start_end, key
+        "sentiment_weekday", start, end, chat_df_start_end, key, authors
     )
-    count_by_weekday = plot_image("count_weekday", start, end, chat_df_start_end, key)
-    sentiment_hour = plot_image("sentiment_hour", start, end, chat_df_start_end, key)
-    top_words = plot_image("top_words", start, end, chat_df_start_end, key)
-    top_emoji = plot_image("top_emoji", start, end, chat_df_start_end, key)
+    count_by_weekday = plot_image("count_weekday", start, end, chat_df_start_end, key, authors)
+    sentiment_hour = plot_image("sentiment_hour", start, end, chat_df_start_end, key, authors)
+    top_words = plot_image("top_words", start, end, chat_df_start_end, key, authors)
+    top_emoji = plot_image("top_emoji", start, end, chat_df_start_end, key, authors)
     top_words_positive = plot_image(
-        "top_words_positive", start, end, chat_df_start_end, key
+        "top_words_positive", start, end, chat_df_start_end, key, authors
     )
     top_words_negative = plot_image(
-        "top_words_negative", start, end, chat_df_start_end, key
+        "top_words_negative", start, end, chat_df_start_end, key, authors
     )
     top_words_neutral = plot_image(
-        "top_words_neutral", start, end, chat_df_start_end, key
+        "top_words_neutral", start, end, chat_df_start_end, key, authors
     )
 
-    general = general_stats(chat_df, start, end)
-    user_table = user_stats(chat_df, start, end)
-    generate_wordclouds(chat_df, key, start, end)
+    general = general_stats(chat_df_start_end, start, end)
+    user_table = user_stats(chat_df_start_end, start, end)
+    os.makedirs(f"./static/{key}/wordclouds", exist_ok=True)
+    if len(os.listdir(f"./static/{key}/wordclouds")) == 0: #start != request.session['start'] or end != request.session['end']
+        generate_wordclouds(chat_df_start_end, key, start, end)
+    request.session['start'] = str(start)
+    request.session['end'] = str(end)
     # print(sentiments)
     return templates.TemplateResponse(
         "statistics.html",

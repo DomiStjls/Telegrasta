@@ -134,6 +134,7 @@ def match(text, alphabet=set("abcdefghijklmnopqrstuvwxyz")):
 
 def generate_wordclouds(df: pd.DataFrame, key: str, start: str, end: str):
     output_dir = f"static/{key}/wordclouds"
+    time = f"{start}_{end}"
     os.makedirs(output_dir, exist_ok=True)
     df_copy = df[
         (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
@@ -157,7 +158,7 @@ def generate_wordclouds(df: pd.DataFrame, key: str, start: str, end: str):
         wc = WordCloud(
             width=400, height=600, stopwords=stopwords_all, background_color="white"
         ).generate(text)
-        wc_path = os.path.join(output_dir, f"{author}.png")
+        wc_path = os.path.join(output_dir, f"{author}_{time}.png")
         wc.to_file(wc_path)
 
 
@@ -196,7 +197,13 @@ def plot_image(
     # sentiments: list = [],
     chat_df=None,
     key: str = None,
+    authors: list = [],
 ):
+    time = f"{start}_{end}"
+    filename = f"{plot_type}_{time}.png"
+    # print(os.listdir(f"./static/{key}"), filename, filename in os.listdir(f"./static/{key}"))
+    # if filename in os.listdir(f"./static/{key}"): # if file exists, skip
+    #     return f"static/{key}/{filename}"
     df_filtered = chat_df.copy()
 
     # if start and end:
@@ -204,7 +211,8 @@ def plot_image(
     #         (pd.to_datetime(df_filtered["date"]) >= pd.to_datetime(start))
     #         & (pd.to_datetime(df_filtered["date"]) <= pd.to_datetime(end))
     #     ]
-
+    if len(authors):
+        df_filtered = df_filtered[df_filtered["from"].isin(authors)]
     fig, ax = plt.subplots(figsize=(12, 4))
 
     plt.rc("axes", unicode_minus=False)
@@ -304,11 +312,7 @@ def plot_image(
         em_df = pd.DataFrame(
             {"emoji": top_emoji_series.index, "count": top_emoji_series.values}
         )
-        # table = "\n".join(
-        #     [f"<tr>\n<td>{r['emoji']}</td>\n<td>{r['count']}</td>\n</tr>" for i, r in em_df.iterrows()]
-        # )
-        # table = {"emoji": top_emoji_series.index[:10].tolist(), "count": top_emoji_series.values[:10].tolist()
-        # }
+
         a_emoji = " ".join([r["emoji"] for i, r in em_df.iterrows()][:5])
         return a_emoji
 
@@ -321,8 +325,8 @@ def plot_image(
     buf.seek(0)
     # img_base64 = base64.b64encode(buf.read()).decode("utf-8")
 
-    unique_id = str(uuid.uuid4())  # Уникальное имя файла
-    filename = f"{plot_type}_{unique_id}.png"
+    time = f"{start}_{end}"
+    filename = f"{plot_type}_{time}.png"
     filepath = os.path.join(f"static/{key}", filename)
 
     fig.savefig(filepath, bbox_inches="tight")
@@ -333,14 +337,15 @@ def plot_image(
 
 def general_stats(df_n: pd.DataFrame, start, end) -> dict:
     df = df_n.copy()
-    if start and end:
-        df = df[
-            (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
-            & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
-        ]
+    # if start and end:
+    #     df = df[
+    #         (pd.to_datetime(df["date"]) >= pd.to_datetime(start))
+    #         & (pd.to_datetime(df["date"]) <= pd.to_datetime(end))
+    #     ]
 
     total_messages = len(df)
     authors = df["from"].unique().tolist()
+    print(df['date'].min().date())
 
     sentiment_counts = df["sentimental"].value_counts(normalize=True) * 100
     sentiment_percent = {
@@ -389,10 +394,10 @@ def user_stats(df_n: pd.DataFrame, start, end) -> pd.DataFrame:
     df["day"] = pd.to_datetime(df["day"])
 
     # Фильтрация по дате
-    if start and end:
-        df = df[
-            (df["date"] >= pd.to_datetime(start)) & (df["date"] <= pd.to_datetime(end))
-        ]
+    # if start and end:
+    #     df = df[
+    #         (df["date"] >= pd.to_datetime(start)) & (df["date"] <= pd.to_datetime(end))
+    #     ]
 
     df["hour"] = df["date"].dt.hour
     grouped = df.groupby("from")
